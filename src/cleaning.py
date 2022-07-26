@@ -68,7 +68,7 @@ def new_search(url):
     for list_ in list_of_lists:
         state, zip_code = list_[0], list_[1]
         states.append(state)
-        zip_codes.append(zip_code)
+        zip_codes.append(str(zip_code))
     
     # Return all parcel size, price, name data to new list.
     parcel_size = soup.select('div.post-location-snippet.tmargin span.inline-block')
@@ -76,10 +76,10 @@ def new_search(url):
     listing_name = soup.select('a.h3.bold.bmargin.center-block')
 
     # clean parcel data.
-    size = [i.get_text().strip() for i in parcel_size] # send to cleaning function later
+    size = [i.get_text().strip() for i in parcel_size]
     size = [i.lstrip("Acres:\n") for i in size]
-    price = [i.get_text().strip() for i in parcel_price] # send to cleaning function later
-    listing = [i.get_text().strip() for i in listing_name] # send to cleaning function later
+    price = [i.get_text().lstrip('\n$').replace(",","") for i in parcel_price]
+    listing = [i.get_text().strip() for i in listing_name]
 
     # Return author and date data of all results on page 1 to new lists.
     author_and_date = soup.select('div.col-xs-8.col-sm-10.nolpad.font-sm.bmargin.posted_meta_data')
@@ -106,3 +106,23 @@ def new_search(url):
 def input_date():
     """ RETURN A DATE VIA USER INPUT """
     return input("Enter a date in the \"YYYY-MM-DD\" format to import a CSV from: ")
+
+def avg_df(df):
+    prev_zip = df["Zip Code"][0]
+    price_sum = 0
+    acre_sum = 0
+    avg_dict = {"Zip Code":[],"Avg Acre Price":[]}
+    for i in range(len(df)):
+        current_zip = df["Zip Code"][i]
+        if current_zip != prev_zip:
+            avg_dict["Zip Code"].append(prev_zip)
+            avg_dict["Avg Acre Price"].append(price_sum/acre_sum)
+            price_sum=0
+            acre_sum=0
+        prev_zip = current_zip
+        price_sum += df["Parcel Price"][i]
+        acre_sum += df["Parcel Size (acres)"][i]
+    avg_dict["Zip Code"].append(prev_zip)
+    avg_dict["Avg Acre Price"].append(price_sum/acre_sum)
+    avg_df = pd.DataFrame.from_dict(avg_dict)
+    return avg_df
